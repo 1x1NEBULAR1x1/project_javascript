@@ -23,7 +23,16 @@ exports.getSettings = (req, res) => {
 // Aktualizacja ustawień pomodoro
 exports.updateSettings = (req, res) => {
   try {
-    const settings = Pomodoro.updateSettings(req.body);
+    const { workDuration, breakDuration, longBreakDuration, longBreakInterval } = req.body;
+    
+    const settingsData = {
+      work_duration: workDuration,
+      break_duration: breakDuration,
+      long_break_duration: longBreakDuration,
+      long_break_interval: longBreakInterval
+    };
+    
+    const settings = Pomodoro.updateSettings(settingsData);
     
     res.status(200).json({
       status: 'success',
@@ -86,9 +95,18 @@ exports.getAllSessions = (req, res) => {
 // Zapisywanie nowej sesji pomodoro
 exports.saveSession = (req, res) => {
   try {
-    const session = Pomodoro.saveSession(req.body);
+    const { date, taskId, duration, type } = req.body;
     
-    res.status(session.id ? 201 : 200).json({
+    const sessionData = {
+      task_id: taskId,
+      start_time: date || new Date().toISOString(),
+      duration,
+      type
+    };
+    
+    const session = Pomodoro.createSession(sessionData);
+    
+    res.status(201).json({
       status: 'success',
       data: {
         session

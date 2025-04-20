@@ -1,6 +1,53 @@
 const express = require('express');
 const router = express.Router();
-const pomodoroController = require('../controllers/pomodoroController');
+const Pomodoro = require('../models/Pomodoro');
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     PomodoroSettings:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           description: ID ustawień (zawsze 1)
+ *         work_duration:
+ *           type: integer
+ *           description: Czas pracy w minutach
+ *         break_duration:
+ *           type: integer
+ *           description: Czas przerwy w minutach
+ *         long_break_duration:
+ *           type: integer
+ *           description: Czas długiej przerwy w minutach
+ *         long_break_interval:
+ *           type: integer
+ *           description: Liczba sesji przed długą przerwą
+ *     PomodoroSession:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           description: ID sesji
+ *         task_id:
+ *           type: integer
+ *           description: ID powiązanego zadania
+ *         start_time:
+ *           type: string
+ *           format: date-time
+ *           description: Czas rozpoczęcia sesji
+ *         end_time:
+ *           type: string
+ *           format: date-time
+ *           description: Czas zakończenia sesji
+ *         duration:
+ *           type: integer
+ *           description: Czas trwania sesji w minutach
+ *         type:
+ *           type: string
+ *           description: Typ sesji (work, break, long_break)
+ */
 
 /**
  * @swagger
@@ -24,10 +71,25 @@ const pomodoroController = require('../controllers/pomodoroController');
  *                   properties:
  *                     settings:
  *                       $ref: '#/components/schemas/PomodoroSettings'
- *       500:
- *         description: Błąd serwera
  */
-router.get('/settings', pomodoroController.getSettings);
+router.get('/settings', (req, res) => {
+  try {
+    const settings = Pomodoro.getSettings();
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        settings
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Błąd podczas pobierania ustawień pomodoro',
+      error: error.message
+    });
+  }
+});
 
 /**
  * @swagger
@@ -44,39 +106,54 @@ router.get('/settings', pomodoroController.getSettings);
  *               workDuration:
  *                 type: integer
  *                 description: Czas pracy w minutach
- *                 example: 25
  *               breakDuration:
  *                 type: integer
  *                 description: Czas przerwy w minutach
- *                 example: 5
  *               longBreakDuration:
  *                 type: integer
  *                 description: Czas długiej przerwy w minutach
- *                 example: 15
  *               longBreakInterval:
  *                 type: integer
  *                 description: Liczba sesji przed długą przerwą
- *                 example: 4
  *     responses:
  *       200:
  *         description: Ustawienia zaktualizowane
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: success
- *                 data:
- *                   type: object
- *                   properties:
- *                     settings:
- *                       $ref: '#/components/schemas/PomodoroSettings'
- *       500:
- *         description: Błąd serwera
  */
-router.put('/settings', pomodoroController.updateSettings);
+router.put('/settings', (req, res) => {
+  try {
+    // Преобразование camelCase в snake_case
+    const { workDuration, breakDuration, longBreakDuration, longBreakInterval } = req.body;
+    
+    const settingsData = {
+      work_duration: workDuration,
+      break_duration: breakDuration,
+      long_break_duration: longBreakDuration,
+      long_break_interval: longBreakInterval
+    };
+    
+    const settings = Pomodoro.updateSettings(settingsData);
+    
+    if (!settings) {
+      return res.status(500).json({
+        status: 'error',
+        message: 'Nie można zaktualizować ustawień pomodoro'
+      });
+    }
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        settings
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Błąd podczas aktualizacji ustawień pomodoro',
+      error: error.message
+    });
+  }
+});
 
 /**
  * @swagger
@@ -87,28 +164,26 @@ router.put('/settings', pomodoroController.updateSettings);
  *     responses:
  *       200:
  *         description: Lista wszystkich sesji pomodoro
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: success
- *                 results:
- *                   type: integer
- *                   example: 1
- *                 data:
- *                   type: object
- *                   properties:
- *                     sessions:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/PomodoroSession'
- *       500:
- *         description: Błąd serwera
  */
-router.get('/sessions', pomodoroController.getAllSessions);
+router.get('/sessions', (req, res) => {
+  try {
+    const sessions = Pomodoro.getAllSessions();
+    
+    res.status(200).json({
+      status: 'success',
+      results: sessions.length,
+      data: {
+        sessions
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Błąd podczas pobierania sesji pomodoro',
+      error: error.message
+    });
+  }
+});
 
 /**
  * @swagger
@@ -127,93 +202,222 @@ router.get('/sessions', pomodoroController.getAllSessions);
  *     responses:
  *       200:
  *         description: Sesje pomodoro dla danej daty
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: success
- *                 results:
- *                   type: integer
- *                   example: 1
- *                 data:
- *                   type: object
- *                   properties:
- *                     sessions:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/PomodoroSession'
- *       500:
- *         description: Błąd serwera
  */
-router.get('/sessions/:date', pomodoroController.getSessionsByDate);
+router.get('/sessions/:date', (req, res) => {
+  try {
+    const { date } = req.params;
+    const sessions = Pomodoro.getSessionsByDate(date);
+    
+    res.status(200).json({
+      status: 'success',
+      results: sessions.length,
+      data: {
+        sessions
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Błąd podczas pobierania sesji pomodoro',
+      error: error.message
+    });
+  }
+});
 
 /**
  * @swagger
  * /api/pomodoro/sessions:
  *   post:
- *     summary: Zapisz nową sesję pomodoro
+ *     summary: Utwórz nową sesję pomodoro
  *     tags: [Pomodoro]
  *     requestBody:
- *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required:
- *               - date
- *               - completedSessions
- *               - totalTime
  *             properties:
+ *               taskId:
+ *                 type: integer
+ *                 description: ID powiązanego zadania
  *               date:
  *                 type: string
- *                 format: date
- *                 description: Data sesji (YYYY-MM-DD)
- *                 example: "2025-04-11"
+ *                 format: date-time
+ *                 description: Czas rozpoczęcia sesji
+ *               duration:
+ *                 type: integer
+ *                 description: Czas trwania sesji w minutach
+ *               type:
+ *                 type: string
+ *                 description: Typ sesji (work, break, long_break)
  *               completedSessions:
  *                 type: integer
- *                 description: Liczba ukończonych sesji
- *                 example: 1
+ *                 description: (Legacy) Liczba ukończonych sesji
  *               totalTime:
  *                 type: integer
- *                 description: Całkowity czas pracy w minutach
- *                 example: 25
+ *                 description: (Legacy) Całkowity czas pracy w minutach
  *     responses:
  *       201:
  *         description: Sesja utworzona
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: success
- *                 data:
- *                   type: object
- *                   properties:
- *                     session:
- *                       $ref: '#/components/schemas/PomodoroSession'
- *       200:
- *         description: Sesja zaktualizowana (gdy istnieje już sesja z tą datą)
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: success
- *                 data:
- *                   type: object
- *                   properties:
- *                     session:
- *                       $ref: '#/components/schemas/PomodoroSession'
- *       500:
- *         description: Błąd serwera
  */
-router.post('/sessions', pomodoroController.saveSession);
+router.post('/sessions', (req, res) => {
+  try {
+    const { taskId, date, duration, type, completedSessions, totalTime } = req.body;
+    
+    // Obsługa starego formatu
+    let sessionData = {};
+    
+    if (completedSessions !== undefined || totalTime !== undefined) {
+      // Stary format - konwersja do nowego
+      sessionData = {
+        task_id: taskId || null,
+        start_time: date || new Date().toISOString(),
+        duration: totalTime || 25, // Domyślny czas to 25 minut
+        type: 'work'
+      };
+    } else {
+      // Nowy format
+      if (!duration || !type) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Wymagane pola: duration, type'
+        });
+      }
+      
+      sessionData = {
+        task_id: taskId || null,
+        start_time: date || new Date().toISOString(),
+        duration,
+        type
+      };
+    }
+    
+    const session = Pomodoro.createSession(sessionData);
+    
+    if (!session) {
+      return res.status(500).json({
+        status: 'error',
+        message: 'Nie można utworzyć sesji pomodoro'
+      });
+    }
+    
+    res.status(201).json({
+      status: 'success',
+      data: {
+        session
+      }
+    });
+  } catch (error) {
+    console.error('Błąd podczas tworzenia sesji pomodoro:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Błąd podczas tworzenia sesji pomodoro',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/pomodoro/sessions/{id}/complete:
+ *   put:
+ *     summary: Zakończ sesję pomodoro
+ *     tags: [Pomodoro]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID sesji
+ *     responses:
+ *       200:
+ *         description: Sesja zakończona
+ */
+router.put('/sessions/:id/complete', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const session = Pomodoro.getSessionById(id);
+    
+    if (!session) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Sesja nie znaleziona'
+      });
+    }
+    
+    const updatedSession = Pomodoro.completeSession(id, new Date().toISOString());
+    
+    if (!updatedSession) {
+      return res.status(500).json({
+        status: 'error',
+        message: 'Nie można zaktualizować sesji'
+      });
+    }
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        session: updatedSession
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Błąd podczas aktualizacji sesji',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/pomodoro/sessions/{id}:
+ *   delete:
+ *     summary: Usuń sesję pomodoro
+ *     tags: [Pomodoro]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID sesji
+ *     responses:
+ *       200:
+ *         description: Sesja usunięta
+ */
+router.delete('/sessions/:id', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const session = Pomodoro.getSessionById(id);
+    
+    if (!session) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Sesja nie znaleziona'
+      });
+    }
+    
+    const deleted = Pomodoro.deleteSession(id);
+    
+    if (!deleted) {
+      return res.status(500).json({
+        status: 'error',
+        message: 'Nie można usunąć sesji'
+      });
+    }
+    
+    res.status(200).json({
+      status: 'success',
+      message: 'Sesja usunięta pomyślnie'
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Błąd podczas usuwania sesji',
+      error: error.message
+    });
+  }
+});
 
 module.exports = router; 

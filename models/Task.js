@@ -1,68 +1,60 @@
-const { readData, writeData, generateId } = require('./dbModel');
+const db = require('./database');
 
 class Task {
   // Pobieranie wszystkich zadań
   static getAll() {
-    const data = readData();
-    return data.tasks;
+    return db.prepare('SELECT * FROM tasks ORDER BY created_at DESC').all();
   }
   
   // Pobieranie zadania po ID
   static getById(id) {
-    const data = readData();
-    return data.tasks.find(task => task.id === id);
+    return db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
   }
   
   // Tworzenie nowego zadania
   static create(taskData) {
-    const data = readData();
+    const { title, description, status = 'todo', priority = 1 } = taskData;
     
-    const newTask = {
-      id: generateId('tasks'),
-      title: taskData.title,
-      description: taskData.description || '',
-      status: taskData.status || 'do zrobienia',
-      priority: taskData.priority || 'średni',
-      createdAt: new Date().toISOString(),
-      deadline: taskData.deadline || null
-    };
+    const stmt = db.prepare(`
+      INSERT INTO tasks (title, description, status, priority)
+      VALUES (?, ?, ?, ?)
+    `);
     
-    data.tasks.push(newTask);
-    writeData(data);
+    const result = stmt.run(title, description, status, priority);
     
-    return newTask;
+    if (result.changes > 0) {
+      return this.getById(result.lastInsertRowid);
+    }
+    return null;
   }
   
   // Aktualizacja zadania
   static update(id, taskData) {
-    const data = readData();
-    const taskIndex = data.tasks.findIndex(task => task.id === id);
+    const { title, description, status, priority } = taskData;
     
-    if (taskIndex === -1) return null;
+    const stmt = db.prepare(`
+      UPDATE tasks
+      SET title = ?, description = ?, status = ?, priority = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
     
-    const updatedTask = {
-      ...data.tasks[taskIndex],
-      ...taskData,
-      id
-    };
+    const result = stmt.run(title, description, status, priority, id);
     
-    data.tasks[taskIndex] = updatedTask;
-    writeData(data);
-    
-    return updatedTask;
+    if (result.changes > 0) {
+      return this.getById(id);
+    }
+    return null;
   }
   
   // Usuwanie zadania
   static delete(id) {
-    const data = readData();
-    const taskIndex = data.tasks.findIndex(task => task.id === id);
-    
-    if (taskIndex === -1) return false;
-    
-    data.tasks.splice(taskIndex, 1);
-    writeData(data);
-    
-    return true;
+    const stmt = db.prepare('DELETE FROM tasks WHERE id = ?');
+    const result = stmt.run(id);
+    return result.changes > 0;
+  }
+
+  static getByStatus(status) {
+    return db.prepare('SELECT * FROM tasks WHERE status = ? ORDER BY priority DESC').all(status);
   }
 }
 

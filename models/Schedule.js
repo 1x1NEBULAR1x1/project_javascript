@@ -1,103 +1,148 @@
-const { readData, writeData, generateId } = require('./dbModel');
+const db = require('./database');
 
 class Schedule {
   // Pobieranie wszystkich harmonogramów
   static getAll() {
-    const data = readData();
-    return data.schedule;
+    return db.prepare('SELECT * FROM schedule ORDER BY start_date ASC').all();
   }
   
   // Pobieranie harmonogramu po dacie
   static getByDate(date) {
-    const data = readData();
-    return data.schedule.find(day => day.date === date);
+    const data = db.prepare('SELECT * FROM schedule WHERE start_date <= ? AND end_date >= ?').get(date, date);
+    
+    if (data) {
+      // Добавляем связанные события
+      data.events = this.getEventsByScheduleId(data.id);
+    }
+    
+    return data;
   }
   
   // Pobieranie harmonogramu po ID
   static getById(id) {
-    const data = readData();
-    return data.schedule.find(schedule => schedule.id === id);
+    const schedule = db.prepare('SELECT * FROM schedule WHERE id = ?').get(id);
+    
+    if (schedule) {
+      // Добавляем связанные события
+      schedule.events = this.getEventsByScheduleId(schedule.id);
+    }
+    
+    return schedule;
   }
   
   // Tworzenie nowego harmonogramu
-  static create(scheduleData) {
-    const data = readData();
-    const { date } = scheduleData;
+  static create(eventData) {
+    const { title, description, start_date, end_date } = eventData;
     
-    const existingScheduleIndex = data.schedule.findIndex(item => item.date === date);
-    if (existingScheduleIndex !== -1) return null;
+    const stmt = db.prepare(`
+      INSERT INTO schedule (title, description, start_date, end_date)
+      VALUES (?, ?, ?, ?)
+    `);
     
-    const newSchedule = {
-      id: generateId('schedule'),
-      date,
-      events: scheduleData.events || []
-    };
+    const result = stmt.run(title, description, start_date, end_date);
     
-    data.schedule.push(newSchedule);
-    writeData(data);
-    
-    return newSchedule;
+    if (result.changes > 0) {
+      return this.getById(result.lastInsertRowid);
+    }
+    return null;
   }
   
-  // Dodawanie wydarzenia do harmonogramu
+  // Aktualizacja wydarzenia
+  static update(id, eventData) {
+    const { title, description, start_date, end_date } = eventData;
+    
+    const stmt = db.prepare(`
+      UPDATE schedule
+      SET title = ?, description = ?, start_date = ?, end_date = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+    
+    const result = stmt.run(title, description, start_date, end_date, id);
+    
+    if (result.changes > 0) {
+      return this.getById(id);
+    }
+    return null;
+  }
+  
+  // Usuwanie wydarzenia
+  static delete(id) {
+    const stmt = db.prepare('DELETE FROM schedule WHERE id = ?');
+    const result = stmt.run(id);
+    return result.changes > 0;
+  }
+
+  static getByDateRange(startDate, endDate) {
+    return db.prepare(`
+      SELECT * FROM schedule 
+      WHERE (start_date BETWEEN ? AND ?) OR (end_date BETWEEN ? AND ?)
+      ORDER BY start_date ASC
+    `).all(startDate, endDate, startDate, endDate);
+  }
+  
+  // Dodanie wydarzenia do harmonogramu
   static addEvent(scheduleId, eventData) {
-    const data = readData();
-    const scheduleIndex = data.schedule.findIndex(item => item.id === scheduleId);
+    const { title, startTime, endTime, description = '' } = eventData;
     
-    if (scheduleIndex === -1) return null;
+    // Sprawdzenie czy harmonogram istnieje
+    const schedule = this.getById(scheduleId);
+    if (!schedule) {
+      return null;
+    }
     
-    const newEvent = {
-      id: generateId('events'),
-      title: eventData.title,
-      startTime: eventData.startTime,
-      endTime: eventData.endTime,
-      description: eventData.description || ''
-    };
+    // Dodanie wydarzenia
+    const stmt = db.prepare(`
+      INSERT INTO schedule_events (schedule_id, title, description, startTime, endTime)
+      VALUES (?, ?, ?, ?, ?)
+    `);
     
-    data.schedule[scheduleIndex].events.push(newEvent);
-    writeData(data);
+    const result = stmt.run(scheduleId, title, description, startTime, endTime);
     
-    return newEvent;
+    if (result.changes > 0) {
+      return this.getEventById(result.lastInsertRowid);
+    }
+    return null;
+  }
+  
+  // Pobieranie wydarzenia po ID
+  static getEventById(eventId) {
+    return db.prepare('SELECT * FROM schedule_events WHERE id = ?').get(eventId);
+  }
+  
+  // Pobieranie wszystkich wydarzeń dla harmonogramu
+  static getEventsByScheduleId(scheduleId) {
+    return db.prepare('SELECT * FROM schedule_events WHERE schedule_id = ? ORDER BY startTime ASC').all(scheduleId);
   }
   
   // Aktualizacja wydarzenia
   static updateEvent(scheduleId, eventId, eventData) {
-    const data = readData();
-    const scheduleIndex = data.schedule.findIndex(item => item.id === scheduleId);
+    const event = db.prepare('SELECT * FROM schedule_events WHERE id = ? AND schedule_id = ?').get(eventId, scheduleId);
     
-    if (scheduleIndex === -1) return null;
+    if (!event) {
+      return null;
+    }
     
-    const eventIndex = data.schedule[scheduleIndex].events.findIndex(event => event.id === eventId);
+    const { title, startTime, endTime, description } = eventData;
     
-    if (eventIndex === -1) return null;
+    const stmt = db.prepare(`
+      UPDATE schedule_events
+      SET title = ?, description = ?, startTime = ?, endTime = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND schedule_id = ?
+    `);
     
-    const updatedEvent = {
-      ...data.schedule[scheduleIndex].events[eventIndex],
-      ...eventData,
-      id: eventId
-    };
+    const result = stmt.run(title, description, startTime, endTime, eventId, scheduleId);
     
-    data.schedule[scheduleIndex].events[eventIndex] = updatedEvent;
-    writeData(data);
-    
-    return updatedEvent;
+    if (result.changes > 0) {
+      return this.getEventById(eventId);
+    }
+    return null;
   }
   
   // Usuwanie wydarzenia
   static deleteEvent(scheduleId, eventId) {
-    const data = readData();
-    const scheduleIndex = data.schedule.findIndex(item => item.id === scheduleId);
-    
-    if (scheduleIndex === -1) return false;
-    
-    const eventIndex = data.schedule[scheduleIndex].events.findIndex(event => event.id === eventId);
-    
-    if (eventIndex === -1) return false;
-    
-    data.schedule[scheduleIndex].events.splice(eventIndex, 1);
-    writeData(data);
-    
-    return true;
+    const stmt = db.prepare('DELETE FROM schedule_events WHERE id = ? AND schedule_id = ?');
+    const result = stmt.run(eventId, scheduleId);
+    return result.changes > 0;
   }
 }
 

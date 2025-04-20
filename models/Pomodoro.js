@@ -1,86 +1,116 @@
-const { readData, writeData, generateId } = require('./dbModel');
+const db = require('./database');
 
 class Pomodoro {
   // Pobieranie ustawień pomodoro
   static getSettings() {
-    const data = readData();
-    const { workDuration, breakDuration, longBreakDuration, longBreakInterval } = data.pomodoro;
-    
-    return {
-      workDuration,
-      breakDuration,
-      longBreakDuration,
-      longBreakInterval
-    };
+    return db.prepare('SELECT * FROM pomodoro_settings WHERE id = 1').get();
   }
   
   // Aktualizacja ustawień pomodoro
   static updateSettings(settingsData) {
-    const data = readData();
+    // Получаем текущие настройки
+    const currentSettings = this.getSettings();
     
-    const updatedSettings = {
-      ...data.pomodoro,
-      workDuration: settingsData.workDuration || data.pomodoro.workDuration,
-      breakDuration: settingsData.breakDuration || data.pomodoro.breakDuration,
-      longBreakDuration: settingsData.longBreakDuration || data.pomodoro.longBreakDuration,
-      longBreakInterval: settingsData.longBreakInterval || data.pomodoro.longBreakInterval
-    };
+    // Используем текущие значения, если новые не предоставлены
+    const work_duration = settingsData.work_duration !== undefined ? settingsData.work_duration : currentSettings.work_duration;
+    const break_duration = settingsData.break_duration !== undefined ? settingsData.break_duration : currentSettings.break_duration;
+    const long_break_duration = settingsData.long_break_duration !== undefined ? settingsData.long_break_duration : currentSettings.long_break_duration;
+    const long_break_interval = settingsData.long_break_interval !== undefined ? settingsData.long_break_interval : currentSettings.long_break_interval;
     
-    // Zachowywanie istniejących sesji
-    updatedSettings.sessions = data.pomodoro.sessions;
+    const stmt = db.prepare(`
+      UPDATE pomodoro_settings
+      SET work_duration = ?, break_duration = ?, long_break_duration = ?, long_break_interval = ?
+      WHERE id = 1
+    `);
     
-    data.pomodoro = updatedSettings;
-    writeData(data);
+    const result = stmt.run(work_duration, break_duration, long_break_duration, long_break_interval);
     
-    return {
-      workDuration: updatedSettings.workDuration,
-      breakDuration: updatedSettings.breakDuration,
-      longBreakDuration: updatedSettings.longBreakDuration,
-      longBreakInterval: updatedSettings.longBreakInterval
-    };
+    if (result.changes > 0) {
+      return this.getSettings();
+    }
+    return null;
   }
   
   // Pobieranie wszystkich sesji
   static getAllSessions() {
-    const data = readData();
-    return data.pomodoro.sessions;
+    return db.prepare(`
+      SELECT ps.*, t.title as task_title
+      FROM pomodoro_sessions ps
+      LEFT JOIN tasks t ON ps.task_id = t.id
+      ORDER BY ps.start_time DESC
+    `).all();
   }
   
   // Pobieranie sesji po dacie
   static getSessionsByDate(date) {
-    const data = readData();
-    return data.pomodoro.sessions.filter(session => session.date === date);
+    return db.prepare(`
+      SELECT ps.*, t.title as task_title
+      FROM pomodoro_sessions ps
+      LEFT JOIN tasks t ON ps.task_id = t.id
+      WHERE DATE(ps.start_time) = DATE(?)
+      ORDER BY ps.start_time DESC
+    `).all(date);
+  }
+  
+  // Pobieranie sesji po id
+  static getSessionById(id) {
+    return db.prepare(`
+      SELECT ps.*, t.title as task_title
+      FROM pomodoro_sessions ps
+      LEFT JOIN tasks t ON ps.task_id = t.id
+      WHERE ps.id = ?
+    `).get(id);
+  }
+  
+  // Pobieranie sesji po id zadania
+  static getSessionsByTaskId(taskId) {
+    return db.prepare(`
+      SELECT ps.*, t.title as task_title
+      FROM pomodoro_sessions ps
+      LEFT JOIN tasks t ON ps.task_id = t.id
+      WHERE ps.task_id = ?
+      ORDER BY ps.start_time DESC
+    `).all(taskId);
   }
   
   // Zapisywanie nowej sesji
-  static saveSession(sessionData) {
-    const data = readData();
-    const { date, completedSessions, totalTime } = sessionData;
+  static createSession(sessionData) {
+    const { task_id, start_time, duration, type } = sessionData;
     
-    const existingSessionIndex = data.pomodoro.sessions.findIndex(session => session.date === date);
+    const stmt = db.prepare(`
+      INSERT INTO pomodoro_sessions (task_id, start_time, duration, type)
+      VALUES (?, ?, ?, ?)
+    `);
     
-    if (existingSessionIndex !== -1) {
-      // Aktualizacja istniejącej sesji
-      data.pomodoro.sessions[existingSessionIndex].completedSessions += completedSessions;
-      data.pomodoro.sessions[existingSessionIndex].totalTime += totalTime;
-      
-      writeData(data);
-      
-      return data.pomodoro.sessions[existingSessionIndex];
+    const result = stmt.run(task_id, start_time, duration, type);
+    
+    if (result.changes > 0) {
+      return this.getSessionById(result.lastInsertRowid);
     }
+    return null;
+  }
+  
+  // Aktualizacja sesji
+  static completeSession(id, end_time) {
+    const stmt = db.prepare(`
+      UPDATE pomodoro_sessions
+      SET end_time = ?
+      WHERE id = ?
+    `);
     
-    // Tworzenie nowej sesji
-    const newSession = {
-      id: generateId('sessions'),
-      date,
-      completedSessions,
-      totalTime
-    };
+    const result = stmt.run(end_time, id);
     
-    data.pomodoro.sessions.push(newSession);
-    writeData(data);
-    
-    return newSession;
+    if (result.changes > 0) {
+      return this.getSessionById(id);
+    }
+    return null;
+  }
+  
+  // Usuwanie sesji
+  static deleteSession(id) {
+    const stmt = db.prepare('DELETE FROM pomodoro_sessions WHERE id = ?');
+    const result = stmt.run(id);
+    return result.changes > 0;
   }
 }
 

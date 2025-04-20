@@ -1,6 +1,40 @@
 const express = require('express');
 const router = express.Router();
-const tasksController = require('../controllers/tasksController');
+const Task = require('../models/Task');
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Task:
+ *       type: object
+ *       required:
+ *         - title
+ *       properties:
+ *         id:
+ *           type: integer
+ *           description: ID zadania
+ *         title:
+ *           type: string
+ *           description: Tytuł zadania
+ *         description:
+ *           type: string
+ *           description: Opis zadania
+ *         status:
+ *           type: string
+ *           description: Status zadania (todo, in_progress, done)
+ *         priority:
+ *           type: integer
+ *           description: Priorytet (1-5)
+ *         created_at:
+ *           type: string
+ *           format: date-time
+ *           description: Data utworzenia
+ *         updated_at:
+ *           type: string
+ *           format: date-time
+ *           description: Data aktualizacji
+ */
 
 /**
  * @swagger
@@ -14,29 +48,23 @@ const tasksController = require('../controllers/tasksController');
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: success
- *                 results:
- *                   type: integer
- *                   example: 2
- *                 data:
- *                   type: object
- *                   properties:
- *                     tasks:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/Task'
- *       500:
- *         description: Błąd serwera
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Task'
  */
-router.get('/', tasksController.getAllTasks);
+router.get('/', (req, res) => {
+  try {
+    const tasks = Task.getAll();
+    res.json(tasks);
+  } catch (error) {
+    console.error('Błąd podczas pobierania zadań:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Błąd podczas pobierania zadań',
+      error: error.message
+    });
+  }
+});
 
 /**
  * @swagger
@@ -47,9 +75,9 @@ router.get('/', tasksController.getAllTasks);
  *     parameters:
  *       - in: path
  *         name: id
- *         schema:
- *           type: string
  *         required: true
+ *         schema:
+ *           type: integer
  *         description: ID zadania
  *     responses:
  *       200:
@@ -57,22 +85,32 @@ router.get('/', tasksController.getAllTasks);
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: success
- *                 data:
- *                   type: object
- *                   properties:
- *                     task:
- *                       $ref: '#/components/schemas/Task'
+ *               $ref: '#/components/schemas/Task'
  *       404:
  *         description: Zadanie nie znalezione
- *       500:
- *         description: Błąd serwera
  */
-router.get('/:id', tasksController.getTask);
+router.get('/:id', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const task = Task.getById(id);
+    
+    if (!task) {
+      return res.status(404).json({ 
+        status: 'error', 
+        message: 'Zadanie nie znalezione' 
+      });
+    }
+    
+    res.json(task);
+  } catch (error) {
+    console.error('Błąd podczas pobierania zadania:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Błąd podczas pobierania zadania',
+      error: error.message
+    });
+  }
+});
 
 /**
  * @swagger
@@ -98,37 +136,45 @@ router.get('/:id', tasksController.getTask);
  *               status:
  *                 type: string
  *                 description: Status zadania
- *                 enum: [do zrobienia, w trakcie, zakończone]
- *                 default: do zrobienia
  *               priority:
- *                 type: string
+ *                 type: integer
  *                 description: Priorytet zadania
- *                 enum: [niski, średni, wysoki]
- *                 default: średni
- *               deadline:
- *                 type: string
- *                 format: date-time
- *                 description: Termin wykonania zadania
  *     responses:
  *       201:
  *         description: Zadanie utworzone
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: success
- *                 data:
- *                   type: object
- *                   properties:
- *                     task:
- *                       $ref: '#/components/schemas/Task'
- *       500:
- *         description: Błąd serwera
+ *       400:
+ *         description: Nieprawidłowe dane
  */
-router.post('/', tasksController.createTask);
+router.post('/', (req, res) => {
+  try {
+    const { title, description, status, priority } = req.body;
+    
+    if (!title) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'Tytuł zadania jest wymagany' 
+      });
+    }
+    
+    const newTask = Task.create({ title, description, status, priority });
+    
+    if (!newTask) {
+      return res.status(500).json({ 
+        status: 'error', 
+        message: 'Nie udało się utworzyć zadania' 
+      });
+    }
+    
+    res.status(201).json(newTask);
+  } catch (error) {
+    console.error('Błąd podczas tworzenia zadania:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Błąd podczas tworzenia zadania',
+      error: error.message
+    });
+  }
+});
 
 /**
  * @swagger
@@ -139,52 +185,60 @@ router.post('/', tasksController.createTask);
  *     parameters:
  *       - in: path
  *         name: id
- *         schema:
- *           type: string
  *         required: true
- *         description: ID zadania
+ *         schema:
+ *           type: integer
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             properties:
- *               title:
- *                 type: string
- *               description:
- *                 type: string
- *               status:
- *                 type: string
- *                 enum: [do zrobienia, w trakcie, zakończone]
- *               priority:
- *                 type: string
- *                 enum: [niski, średni, wysoki]
- *               deadline:
- *                 type: string
- *                 format: date-time
+ *             $ref: '#/components/schemas/Task'
  *     responses:
  *       200:
  *         description: Zadanie zaktualizowane
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: success
- *                 data:
- *                   type: object
- *                   properties:
- *                     task:
- *                       $ref: '#/components/schemas/Task'
  *       404:
  *         description: Zadanie nie znalezione
- *       500:
- *         description: Błąd serwera
  */
-router.put('/:id', tasksController.updateTask);
+router.put('/:id', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { title, description, status, priority } = req.body;
+    
+    if (!title) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'Tytuł zadania jest wymagany' 
+      });
+    }
+    
+    const task = Task.getById(id);
+    if (!task) {
+      return res.status(404).json({ 
+        status: 'error', 
+        message: 'Zadanie nie znalezione' 
+      });
+    }
+    
+    const updatedTask = Task.update(id, { title, description, status, priority });
+    
+    if (!updatedTask) {
+      return res.status(500).json({ 
+        status: 'error', 
+        message: 'Nie udało się zaktualizować zadania' 
+      });
+    }
+    
+    res.json(updatedTask);
+  } catch (error) {
+    console.error('Błąd podczas aktualizacji zadania:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Błąd podczas aktualizacji zadania',
+      error: error.message
+    });
+  }
+});
 
 /**
  * @swagger
@@ -195,18 +249,80 @@ router.put('/:id', tasksController.updateTask);
  *     parameters:
  *       - in: path
  *         name: id
- *         schema:
- *           type: string
  *         required: true
- *         description: ID zadania
+ *         schema:
+ *           type: integer
  *     responses:
  *       204:
  *         description: Zadanie usunięte
  *       404:
  *         description: Zadanie nie znalezione
- *       500:
- *         description: Błąd serwera
  */
-router.delete('/:id', tasksController.deleteTask);
+router.delete('/:id', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const task = Task.getById(id);
+    
+    if (!task) {
+      return res.status(404).json({ 
+        status: 'error', 
+        message: 'Zadanie nie znalezione' 
+      });
+    }
+    
+    const deleted = Task.delete(id);
+    
+    if (!deleted) {
+      return res.status(500).json({ 
+        status: 'error', 
+        message: 'Nie udało się usunąć zadania' 
+      });
+    }
+    
+    res.status(204).json({ 
+      status: 'success', 
+      message: 'Zadanie usunięte pomyślnie'
+    });
+  } catch (error) {
+    console.error('Błąd podczas usuwania zadania:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Błąd podczas usuwania zadania',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/tasks/status/{status}:
+ *   get:
+ *     summary: Pobierz zadania według statusu
+ *     tags: [Zadania]
+ *     parameters:
+ *       - in: path
+ *         name: status
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Status zadania (todo, in_progress, done)
+ *     responses:
+ *       200:
+ *         description: Lista zadań o podanym statusie
+ */
+router.get('/status/:status', (req, res) => {
+  try {
+    const status = req.params.status;
+    const tasks = Task.getByStatus(status);
+    res.json(tasks);
+  } catch (error) {
+    console.error('Błąd podczas pobierania zadań według statusu:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Błąd podczas pobierania zadań według statusu',
+      error: error.message
+    });
+  }
+});
 
 module.exports = router; 

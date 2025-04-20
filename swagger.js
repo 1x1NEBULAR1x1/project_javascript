@@ -61,24 +61,40 @@ const options = {
         },
         Schedule: {
           type: 'object',
-          required: ['date'],
+          required: ['title', 'start_date', 'end_date'],
           properties: {
             id: {
+              type: 'integer',
+              description: 'ID harmonogramu',
+            },
+            title: {
               type: 'string',
-              description: 'Identyfikator harmonogramu',
+              description: 'Tytuł wydarzenia',
             },
-            date: {
+            description: {
               type: 'string',
-              format: 'date',
-              description: 'Data harmonogramu',
+              description: 'Opis wydarzenia',
             },
-            events: {
-              type: 'array',
-              description: 'Lista wydarzeń',
-              items: {
-                $ref: '#/components/schemas/Event',
-              },
+            start_date: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Data i czas rozpoczęcia',
             },
+            end_date: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Data i czas zakończenia',
+            },
+            created_at: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Data utworzenia',
+            },
+            updated_at: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Data aktualizacji',
+            }
           },
         },
         Event: {
@@ -110,19 +126,23 @@ const options = {
         PomodoroSettings: {
           type: 'object',
           properties: {
-            workDuration: {
+            id: {
+              type: 'integer',
+              description: 'ID ustawień (zawsze 1)',
+            },
+            work_duration: {
               type: 'integer',
               description: 'Czas pracy w minutach',
             },
-            breakDuration: {
+            break_duration: {
               type: 'integer',
               description: 'Czas przerwy w minutach',
             },
-            longBreakDuration: {
+            long_break_duration: {
               type: 'integer',
               description: 'Czas długiej przerwy w minutach',
             },
-            longBreakInterval: {
+            long_break_interval: {
               type: 'integer',
               description: 'Liczba sesji przed długą przerwą',
             },
@@ -130,24 +150,32 @@ const options = {
         },
         PomodoroSession: {
           type: 'object',
-          required: ['date', 'completedSessions', 'totalTime'],
           properties: {
             id: {
-              type: 'string',
-              description: 'Identyfikator sesji',
-            },
-            date: {
-              type: 'string',
-              format: 'date',
-              description: 'Data sesji',
-            },
-            completedSessions: {
               type: 'integer',
-              description: 'Liczba ukończonych sesji',
+              description: 'ID sesji',
             },
-            totalTime: {
+            task_id: {
               type: 'integer',
-              description: 'Całkowity czas pracy w minutach',
+              description: 'ID powiązanego zadania',
+            },
+            start_time: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Czas rozpoczęcia sesji',
+            },
+            end_time: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Czas zakończenia sesji',
+            },
+            duration: {
+              type: 'integer',
+              description: 'Czas trwania sesji w minutach',
+            },
+            type: {
+              type: 'string',
+              description: 'Typ sesji (work, break, long_break)',
             },
           },
         },

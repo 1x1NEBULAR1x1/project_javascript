@@ -1,5 +1,4 @@
 const Schedule = require('../models/Schedule');
-const { generateId } = require('../models/dbModel');
 
 // Pobieranie harmonogramu dla określonej daty
 exports.getScheduleByDate = (req, res) => {
@@ -12,7 +11,7 @@ exports.getScheduleByDate = (req, res) => {
         status: 'success',
         data: {
           schedule: {
-            id: generateId('schedule'),
+            id: 0,
             date,
             events: []
           }
@@ -58,12 +57,44 @@ exports.getAllSchedules = (req, res) => {
 // Tworzenie nowego harmonogramu dla dnia
 exports.createSchedule = (req, res) => {
   try {
-    const newSchedule = Schedule.create(req.body);
+    // Sprawdzenie czy mamy stary format (z datą i wydarzeniami)
+    const { date, events, title, description, start_date, end_date } = req.body;
+    
+    let scheduleData = {};
+    
+    if (date) {
+      // Stary format
+      const firstEventTitle = events && events.length > 0 ? events[0].title : 'Wydarzenie';
+      const firstEventDesc = events && events.length > 0 ? events[0].description : '';
+      const startTime = events && events.length > 0 ? events[0].startTime : '00:00';
+      const endTime = events && events.length > 0 ? events[0].endTime : '23:59';
+      
+      // Konwersja do nowego formatu
+      scheduleData = {
+        title: firstEventTitle,
+        description: firstEventDesc,
+        start_date: `${date}T${startTime}`,
+        end_date: `${date}T${endTime}`
+      };
+    } else {
+      // Nowy format
+      scheduleData = { title, description, start_date, end_date };
+    }
+    
+    // Sprawdzenie wymaganych pól
+    if (!scheduleData.title || !scheduleData.start_date || !scheduleData.end_date) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'Wymagane pola: title, start_date, end_date'
+      });
+    }
+    
+    const newSchedule = Schedule.create(scheduleData);
     
     if (!newSchedule) {
       return res.status(400).json({
         status: 'fail',
-        message: `Harmonogram dla daty ${req.body.date} już istnieje`
+        message: 'Nie udało się utworzyć harmonogramu'
       });
     }
     
@@ -74,6 +105,7 @@ exports.createSchedule = (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Błąd podczas tworzenia harmonogramu:', error);
     res.status(500).json({
       status: 'error',
       message: 'Błąd podczas tworzenia harmonogramu',
