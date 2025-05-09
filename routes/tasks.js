@@ -58,8 +58,8 @@ router.get('/', (req, res) => {
     res.json(tasks);
   } catch (error) {
     console.error('Błąd podczas pobierania zadań:', error);
-    res.status(500).json({ 
-      status: 'error', 
+    res.status(500).json({
+      status: 'error',
       message: 'Błąd podczas pobierania zadań',
       error: error.message
     });
@@ -93,19 +93,19 @@ router.get('/:id', (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const task = Task.getById(id);
-    
+
     if (!task) {
-      return res.status(404).json({ 
-        status: 'error', 
-        message: 'Zadanie nie znalezione' 
+      return res.status(404).json({
+        status: 'error',
+        message: 'Zadanie nie znalezione'
       });
     }
-    
+
     res.json(task);
   } catch (error) {
     console.error('Błąd podczas pobierania zadania:', error);
-    res.status(500).json({ 
-      status: 'error', 
+    res.status(500).json({
+      status: 'error',
       message: 'Błąd podczas pobierania zadania',
       error: error.message
     });
@@ -148,28 +148,28 @@ router.get('/:id', (req, res) => {
 router.post('/', (req, res) => {
   try {
     const { title, description, status, priority } = req.body;
-    
+
     if (!title) {
-      return res.status(400).json({ 
-        status: 'error', 
-        message: 'Tytuł zadania jest wymagany' 
+      return res.status(400).json({
+        status: 'error',
+        message: 'Tytuł zadania jest wymagany'
       });
     }
-    
+
     const newTask = Task.create({ title, description, status, priority });
-    
+
     if (!newTask) {
-      return res.status(500).json({ 
-        status: 'error', 
-        message: 'Nie udało się utworzyć zadania' 
+      return res.status(500).json({
+        status: 'error',
+        message: 'Nie udało się utworzyć zadania'
       });
     }
-    
+
     res.status(201).json(newTask);
   } catch (error) {
     console.error('Błąd podczas tworzenia zadania:', error);
-    res.status(500).json({ 
-      status: 'error', 
+    res.status(500).json({
+      status: 'error',
       message: 'Błąd podczas tworzenia zadania',
       error: error.message
     });
@@ -180,7 +180,7 @@ router.post('/', (req, res) => {
  * @swagger
  * /api/tasks/{id}:
  *   put:
- *     summary: Aktualizuj zadanie
+ *     summary: Aktualizuj zadanie (częściowo lub w całości)
  *     tags: [Zadania]
  *     parameters:
  *       - in: path
@@ -193,7 +193,16 @@ router.post('/', (req, res) => {
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Task'
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string 
+ *               status:
+ *                 type: string
+ *               priority:
+ *                 type: integer
  *     responses:
  *       200:
  *         description: Zadanie zaktualizowane
@@ -203,37 +212,47 @@ router.post('/', (req, res) => {
 router.put('/:id', (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { title, description, status, priority } = req.body;
-    
-    if (!title) {
-      return res.status(400).json({ 
-        status: 'error', 
-        message: 'Tytuł zadania jest wymagany' 
+    const updatedFields = req.body;
+
+    // Проверяем, что задача существует
+    const existingTask = Task.getById(id);
+    if (!existingTask) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Zadanie nie znalezione'
       });
     }
-    
-    const task = Task.getById(id);
-    if (!task) {
-      return res.status(404).json({ 
-        status: 'error', 
-        message: 'Zadanie nie znalezione' 
+
+    // Проверяем, что есть хотя бы одно поле для обновления
+    if (Object.keys(updatedFields).length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Brak danych do aktualizacji'
       });
     }
-    
-    const updatedTask = Task.update(id, { title, description, status, priority });
-    
+
+    // Применяем только переданные поля, сохраняя остальные без изменений
+    const taskData = {
+      title: updatedFields.title !== undefined ? updatedFields.title : existingTask.title,
+      description: updatedFields.description !== undefined ? updatedFields.description : existingTask.description,
+      status: updatedFields.status !== undefined ? updatedFields.status : existingTask.status,
+      priority: updatedFields.priority !== undefined ? updatedFields.priority : existingTask.priority
+    };
+
+    const updatedTask = Task.update(id, taskData);
+
     if (!updatedTask) {
-      return res.status(500).json({ 
-        status: 'error', 
-        message: 'Nie udało się zaktualizować zadania' 
+      return res.status(500).json({
+        status: 'error',
+        message: 'Nie udało się zaktualizować zadania'
       });
     }
-    
+
     res.json(updatedTask);
   } catch (error) {
     console.error('Błąd podczas aktualizacji zadania:', error);
-    res.status(500).json({ 
-      status: 'error', 
+    res.status(500).json({
+      status: 'error',
       message: 'Błąd podczas aktualizacji zadania',
       error: error.message
     });
@@ -262,31 +281,31 @@ router.delete('/:id', (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const task = Task.getById(id);
-    
+
     if (!task) {
-      return res.status(404).json({ 
-        status: 'error', 
-        message: 'Zadanie nie znalezione' 
+      return res.status(404).json({
+        status: 'error',
+        message: 'Zadanie nie znalezione'
       });
     }
-    
+
     const deleted = Task.delete(id);
-    
+
     if (!deleted) {
-      return res.status(500).json({ 
-        status: 'error', 
-        message: 'Nie udało się usunąć zadania' 
+      return res.status(500).json({
+        status: 'error',
+        message: 'Nie udało się usunąć zadania'
       });
     }
-    
-    res.status(204).json({ 
-      status: 'success', 
+
+    res.status(204).json({
+      status: 'success',
       message: 'Zadanie usunięte pomyślnie'
     });
   } catch (error) {
     console.error('Błąd podczas usuwania zadania:', error);
-    res.status(500).json({ 
-      status: 'error', 
+    res.status(500).json({
+      status: 'error',
       message: 'Błąd podczas usuwania zadania',
       error: error.message
     });
@@ -317,8 +336,8 @@ router.get('/status/:status', (req, res) => {
     res.json(tasks);
   } catch (error) {
     console.error('Błąd podczas pobierania zadań według statusu:', error);
-    res.status(500).json({ 
-      status: 'error', 
+    res.status(500).json({
+      status: 'error',
       message: 'Błąd podczas pobierania zadań według statusu',
       error: error.message
     });
