@@ -223,7 +223,6 @@ router.put('/:id', (req, res) => {
       });
     }
 
-    // Проверяем, что есть хотя бы одно поле для обновления
     if (Object.keys(updatedFields).length === 0) {
       return res.status(400).json({
         status: 'error',
@@ -231,7 +230,6 @@ router.put('/:id', (req, res) => {
       });
     }
 
-    // Применяем только переданные поля, сохраняя остальные без изменений
     const taskData = {
       title: updatedFields.title !== undefined ? updatedFields.title : existingTask.title,
       description: updatedFields.description !== undefined ? updatedFields.description : existingTask.description,

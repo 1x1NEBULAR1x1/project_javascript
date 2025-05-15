@@ -66,6 +66,8 @@ app.use('/api/*', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+  console.log('To rebuild the frontend go to the /frontend directory and run: npm run build');
+  console.log(`Frontend available at: http://localhost:${PORT}`);
   console.log(`API documentation available at: http://localhost:${PORT}/api-docs`);
 });
 

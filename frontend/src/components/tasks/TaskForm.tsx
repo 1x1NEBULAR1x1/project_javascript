@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import type { Task, CreateTaskDto } from '../types/Task';
+import type { Task, CreateTaskDto } from '../../types';
 
 interface TaskFormProps {
   task?: Task;

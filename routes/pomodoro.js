@@ -75,7 +75,7 @@ const Pomodoro = require('../models/Pomodoro');
 router.get('/settings', (req, res) => {
   try {
     const settings = Pomodoro.getSettings();
-    
+
     res.status(200).json({
       status: 'success',
       data: {
@@ -121,25 +121,24 @@ router.get('/settings', (req, res) => {
  */
 router.put('/settings', (req, res) => {
   try {
-    // Преобразование camelCase в snake_case
     const { workDuration, breakDuration, longBreakDuration, longBreakInterval } = req.body;
-    
+
     const settingsData = {
       work_duration: workDuration,
       break_duration: breakDuration,
       long_break_duration: longBreakDuration,
       long_break_interval: longBreakInterval
     };
-    
+
     const settings = Pomodoro.updateSettings(settingsData);
-    
+
     if (!settings) {
       return res.status(500).json({
         status: 'error',
         message: 'Nie można zaktualizować ustawień pomodoro'
       });
     }
-    
+
     res.status(200).json({
       status: 'success',
       data: {
@@ -168,7 +167,7 @@ router.put('/settings', (req, res) => {
 router.get('/sessions', (req, res) => {
   try {
     const sessions = Pomodoro.getAllSessions();
-    
+
     res.status(200).json({
       status: 'success',
       results: sessions.length,
@@ -207,7 +206,7 @@ router.get('/sessions/:date', (req, res) => {
   try {
     const { date } = req.params;
     const sessions = Pomodoro.getSessionsByDate(date);
-    
+
     res.status(200).json({
       status: 'success',
       results: sessions.length,
@@ -262,44 +261,41 @@ router.get('/sessions/:date', (req, res) => {
 router.post('/sessions', (req, res) => {
   try {
     const { taskId, date, duration, type, completedSessions, totalTime } = req.body;
-    
-    // Obsługa starego formatu
+
     let sessionData = {};
-    
+
     if (completedSessions !== undefined || totalTime !== undefined) {
-      // Stary format - konwersja do nowego
       sessionData = {
         task_id: taskId || null,
         start_time: date || new Date().toISOString(),
-        duration: totalTime || 25, // Domyślny czas to 25 minut
+        duration: totalTime || 25,
         type: 'work'
       };
     } else {
-      // Nowy format
       if (!duration || !type) {
         return res.status(400).json({
           status: 'error',
           message: 'Wymagane pola: duration, type'
         });
       }
-      
+
       sessionData = {
-        task_id: taskId || null,
+        task_id: taskId !== undefined ? taskId : null,
         start_time: date || new Date().toISOString(),
         duration,
         type
       };
     }
-    
+
     const session = Pomodoro.createSession(sessionData);
-    
+
     if (!session) {
       return res.status(500).json({
         status: 'error',
         message: 'Nie można utworzyć sesji pomodoro'
       });
     }
-    
+
     res.status(201).json({
       status: 'success',
       data: {
@@ -307,7 +303,6 @@ router.post('/sessions', (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Błąd podczas tworzenia sesji pomodoro:', error);
     res.status(500).json({
       status: 'error',
       message: 'Błąd podczas tworzenia sesji pomodoro',
@@ -337,23 +332,23 @@ router.put('/sessions/:id/complete', (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const session = Pomodoro.getSessionById(id);
-    
+
     if (!session) {
       return res.status(404).json({
         status: 'error',
         message: 'Sesja nie znaleziona'
       });
     }
-    
+
     const updatedSession = Pomodoro.completeSession(id, new Date().toISOString());
-    
+
     if (!updatedSession) {
       return res.status(500).json({
         status: 'error',
         message: 'Nie można zaktualizować sesji'
       });
     }
-    
+
     res.status(200).json({
       status: 'success',
       data: {
@@ -390,23 +385,23 @@ router.delete('/sessions/:id', (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const session = Pomodoro.getSessionById(id);
-    
+
     if (!session) {
       return res.status(404).json({
         status: 'error',
         message: 'Sesja nie znaleziona'
       });
     }
-    
+
     const deleted = Pomodoro.deleteSession(id);
-    
+
     if (!deleted) {
       return res.status(500).json({
         status: 'error',
         message: 'Nie można usunąć sesji'
       });
     }
-    
+
     res.status(200).json({
       status: 'success',
       message: 'Sesja usunięta pomyślnie'

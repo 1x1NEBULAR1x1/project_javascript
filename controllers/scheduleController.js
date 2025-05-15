@@ -1,12 +1,46 @@
 const Schedule = require('../models/Schedule');
 
-// Pobieranie harmonogramu dla określonej daty
+// Get schedule by date
 exports.getScheduleByDate = (req, res) => {
   try {
     const { date } = req.params;
+
     const daySchedule = Schedule.getByDate(date);
-    
+
     if (!daySchedule) {
+      const existingSchedules = Schedule.getAll();
+
+      const exactDateMatch = existingSchedules.find(s => s.date === date);
+
+      if (exactDateMatch) {
+        const fullSchedule = Schedule.getById(exactDateMatch.id);
+        if (fullSchedule) {
+          return res.status(200).json({
+            status: 'success',
+            data: {
+              schedule: fullSchedule
+            }
+          });
+        }
+      }
+
+      const matchingSchedule = existingSchedules.find(s =>
+        (s.start_date && s.start_date.startsWith(date)) ||
+        (s.end_date && s.end_date.startsWith(date))
+      );
+
+      if (matchingSchedule) {
+        const fullSchedule = Schedule.getById(matchingSchedule.id);
+        if (fullSchedule) {
+          return res.status(200).json({
+            status: 'success',
+            data: {
+              schedule: fullSchedule
+            }
+          });
+        }
+      }
+
       return res.status(200).json({
         status: 'success',
         data: {
@@ -18,7 +52,7 @@ exports.getScheduleByDate = (req, res) => {
         }
       });
     }
-    
+
     res.status(200).json({
       status: 'success',
       data: {
@@ -26,6 +60,7 @@ exports.getScheduleByDate = (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Błąd podczas pobierania harmonogramu:', error);
     res.status(500).json({
       status: 'error',
       message: 'Błąd podczas pobierania harmonogramu',
@@ -34,7 +69,53 @@ exports.getScheduleByDate = (req, res) => {
   }
 };
 
-// Pobieranie wszystkich harmonogramów
+exports.getScheduleById = (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const scheduleId = parseInt(id, 10);
+
+    if (isNaN(scheduleId)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Nieprawidłowy format ID harmonogramu'
+      });
+    }
+
+    const schedule = Schedule.getById(scheduleId);
+
+    if (!schedule) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Nie znaleziono harmonogramu o podanym ID'
+      });
+    }
+
+    const adaptedSchedule = {
+      ...schedule,
+      events: schedule.events?.map(event => ({
+        ...event,
+        start_time: event.startTime,
+        end_time: event.endTime
+      })) || []
+    };
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        schedule: adaptedSchedule
+      }
+    });
+  } catch (error) {
+    console.error('Błąd podczas pobierania harmonogramu:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Błąd podczas pobierania harmonogramu',
+      error: error.message
+    });
+  }
+};
+
 exports.getAllSchedules = (req, res) => {
   try {
     const schedules = Schedule.getAll();
@@ -46,6 +127,7 @@ exports.getAllSchedules = (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Błąd podczas pobierania harmonogramów:', error);
     res.status(500).json({
       status: 'error',
       message: 'Błąd podczas pobierania harmonogramów',
@@ -54,50 +136,70 @@ exports.getAllSchedules = (req, res) => {
   }
 };
 
-// Tworzenie nowego harmonogramu dla dnia
 exports.createSchedule = (req, res) => {
   try {
-    // Sprawdzenie czy mamy stary format (z datą i wydarzeniami)
     const { date, events, title, description, start_date, end_date } = req.body;
-    
-    let scheduleData = {};
-    
+
     if (date) {
-      // Stary format
+      const existingSchedule = Schedule.getByDate(date);
+      if (existingSchedule && existingSchedule.id > 0) {
+        return res.status(200).json({
+          status: 'success',
+          message: 'Harmonogram już istnieje',
+          data: {
+            schedule: existingSchedule
+          }
+        });
+      }
+    }
+
+    let scheduleData = {};
+
+    if (date) {
       const firstEventTitle = events && events.length > 0 ? events[0].title : 'Wydarzenie';
       const firstEventDesc = events && events.length > 0 ? events[0].description : '';
-      const startTime = events && events.length > 0 ? events[0].startTime : '00:00';
-      const endTime = events && events.length > 0 ? events[0].endTime : '23:59';
-      
-      // Konwersja do nowego formatu
+      const start_time = events && events.length > 0 ? events[0].start_time : '00:00';
+      const end_time = events && events.length > 0 ? events[0].end_time : '23:59';
+
       scheduleData = {
-        title: firstEventTitle,
-        description: firstEventDesc,
-        start_date: `${date}T${startTime}`,
-        end_date: `${date}T${endTime}`
+        title: title || firstEventTitle,
+        description: description || firstEventDesc,
+        start_date: start_date || `${date}T${start_time}`,
+        end_date: end_date || `${date}T${end_time}`,
+        date: date
       };
     } else {
-      // Nowy format
-      scheduleData = { title, description, start_date, end_date };
+      // Wyodrębniamy datę z start_date jeśli została podana
+      let extractedDate = '';
+      if (start_date && start_date.includes('T')) {
+        extractedDate = start_date.split('T')[0];
+      }
+
+      scheduleData = {
+        title,
+        description,
+        start_date,
+        end_date,
+        date: extractedDate
+      };
     }
-    
-    // Sprawdzenie wymaganych pól
+
     if (!scheduleData.title || !scheduleData.start_date || !scheduleData.end_date) {
       return res.status(400).json({
         status: 'fail',
         message: 'Wymagane pola: title, start_date, end_date'
       });
     }
-    
+
     const newSchedule = Schedule.create(scheduleData);
-    
+
     if (!newSchedule) {
       return res.status(400).json({
         status: 'fail',
         message: 'Nie udało się utworzyć harmonogramu'
       });
     }
-    
+
     res.status(201).json({
       status: 'success',
       data: {
@@ -114,26 +216,40 @@ exports.createSchedule = (req, res) => {
   }
 };
 
-// Dodawanie wydarzenia do harmonogramu
 exports.addEvent = (req, res) => {
   try {
     const { scheduleId } = req.params;
-    const newEvent = Schedule.addEvent(scheduleId, req.body);
-    
+
+    const eventData = {
+      title: req.body.title,
+      description: req.body.description,
+      startTime: req.body.startTime || req.body.start_time,
+      endTime: req.body.endTime || req.body.end_time
+    };
+
+    const newEvent = Schedule.addEvent(scheduleId, eventData);
+
     if (!newEvent) {
       return res.status(404).json({
         status: 'fail',
         message: 'Nie znaleziono harmonogramu o podanym ID'
       });
     }
-    
+
+    const responseEvent = {
+      ...newEvent,
+      start_time: newEvent.startTime,
+      end_time: newEvent.endTime
+    };
+
     res.status(201).json({
       status: 'success',
       data: {
-        event: newEvent
+        event: responseEvent
       }
     });
   } catch (error) {
+    console.error('Błąd podczas dodawania wydarzenia:', error);
     res.status(500).json({
       status: 'error',
       message: 'Błąd podczas dodawania wydarzenia',
@@ -142,26 +258,40 @@ exports.addEvent = (req, res) => {
   }
 };
 
-// Aktualizacja wydarzenia w harmonogramie
 exports.updateEvent = (req, res) => {
   try {
     const { scheduleId, eventId } = req.params;
-    const updatedEvent = Schedule.updateEvent(scheduleId, eventId, req.body);
-    
+
+    const eventData = {
+      title: req.body.title,
+      description: req.body.description,
+      startTime: req.body.startTime || req.body.start_time,
+      endTime: req.body.endTime || req.body.end_time
+    };
+
+    const updatedEvent = Schedule.updateEvent(scheduleId, eventId, eventData);
+
     if (!updatedEvent) {
       return res.status(404).json({
         status: 'fail',
         message: 'Nie znaleziono harmonogramu lub wydarzenia o podanym ID'
       });
     }
-    
+
+    const responseEvent = {
+      ...updatedEvent,
+      start_time: updatedEvent.startTime,
+      end_time: updatedEvent.endTime
+    };
+
     res.status(200).json({
       status: 'success',
       data: {
-        event: updatedEvent
+        event: responseEvent
       }
     });
   } catch (error) {
+    console.error('Błąd podczas aktualizacji wydarzenia:', error);
     res.status(500).json({
       status: 'error',
       message: 'Błąd podczas aktualizacji wydarzenia',
@@ -170,24 +300,24 @@ exports.updateEvent = (req, res) => {
   }
 };
 
-// Usuwanie wydarzenia z harmonogramu
 exports.deleteEvent = (req, res) => {
   try {
     const { scheduleId, eventId } = req.params;
     const result = Schedule.deleteEvent(scheduleId, eventId);
-    
+
     if (!result) {
       return res.status(404).json({
         status: 'fail',
         message: 'Nie znaleziono harmonogramu lub wydarzenia o podanym ID'
       });
     }
-    
+
     res.status(204).json({
       status: 'success',
       data: null
     });
   } catch (error) {
+    console.error('Błąd podczas usuwania wydarzenia:', error);
     res.status(500).json({
       status: 'error',
       message: 'Błąd podczas usuwania wydarzenia',

@@ -1,22 +1,5 @@
-import axios from 'axios';
-import type { Task, CreateTaskDto, UpdateTaskDto } from '../types/Task';
-
-// Создаем экземпляр axios с базовым URL и заголовками
-const api = axios.create({
-  baseURL: 'http://localhost:3000/api',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Перехватчик для обработки ошибок
-api.interceptors.response.use(
-  response => response,
-  error => {
-    console.error('API Error:', error.response?.data || error.message);
-    return Promise.reject(error);
-  }
-);
+import type { Task, CreateTaskDto, UpdateTaskDto } from '../types/task';
+import { api } from './baseApi';
 
 export const fetchTasks = async (): Promise<Task[]> => {
   try {
@@ -50,9 +33,8 @@ export const fetchTasksByStatus = async (status: string): Promise<Task[]> => {
 
 export const createTask = async (taskData: CreateTaskDto): Promise<Task> => {
   try {
-    // Убедимся, что обязательные поля присутствуют
     if (!taskData.title) {
-      throw new Error('Название задачи обязательно');
+      throw new Error('Task name is required');
     }
 
     const response = await api.post<Task>('/tasks', taskData);
@@ -65,13 +47,12 @@ export const createTask = async (taskData: CreateTaskDto): Promise<Task> => {
 
 export const updateTask = async (id: number, taskData: UpdateTaskDto): Promise<Task> => {
   try {
-    // Проверим что id существует и данные не пусты
     if (!id) {
-      throw new Error('ID задачи обязателен');
+      throw new Error('Task Id id required');
     }
 
     if (Object.keys(taskData).length === 0) {
-      throw new Error('Нет данных для обновления');
+      throw new Error('Not data to update');
     }
 
     const response = await api.put<Task>(`/tasks/${id}`, taskData);
@@ -85,7 +66,7 @@ export const updateTask = async (id: number, taskData: UpdateTaskDto): Promise<T
 export const deleteTask = async (id: number): Promise<boolean> => {
   try {
     if (!id) {
-      throw new Error('ID задачи обязателен');
+      throw new Error('Task Id is required');
     }
 
     await api.delete(`/tasks/${id}`);

@@ -1,21 +1,18 @@
 import { useState } from 'react';
 import { motion, Reorder, useMotionValue, useTransform } from 'framer-motion';
-import type { Task } from '../types/Task';
+import type { Task } from '../../types';
 
 interface TaskItemProps {
   task: Task;
   onEdit: (task: Task) => void;
   onDelete: (id: number) => void;
-  onPriorityChange: (id: number, newPriority: number) => void;
 }
 
-const TaskItem = ({ task, onEdit, onDelete, onPriorityChange }: TaskItemProps) => {
+const TaskItem = ({ task, onEdit, onDelete }: TaskItemProps) => {
   const [isDragging, setIsDragging] = useState(false);
 
-  // Добавляем motion values для более естественной анимации
   const y = useMotionValue(0);
   const rotate = useTransform(y, [-100, 0, 100], [-2, 0, 2]);
-  const scale = useTransform(y, [-100, 0, 100], [0.98, 1, 0.98]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -26,12 +23,10 @@ const TaskItem = ({ task, onEdit, onDelete, onPriorityChange }: TaskItemProps) =
     }
   };
 
-  // Обрабатываем начало перетаскивания
   const handleDragStart = () => {
     setIsDragging(true);
   };
 
-  // Обрабатываем завершение перетаскивания
   const handleDragEnd = () => {
     setIsDragging(false);
   };
@@ -127,4 +122,4 @@ const TaskItem = ({ task, onEdit, onDelete, onPriorityChange }: TaskItemProps) =
   );
 };
 
-export default TaskItem; 
+export default TaskItem;

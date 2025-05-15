@@ -36,6 +36,42 @@ router.get('/', scheduleController.getAllSchedules);
 
 /**
  * @swagger
+ * /api/schedule/id/{id}:
+ *   get:
+ *     summary: Pobierz harmonogram po ID
+ *     tags: [Harmonogram]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID harmonogramu
+ *     responses:
+ *       200:
+ *         description: Harmonogram o podanym ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     schedule:
+ *                       $ref: '#/components/schemas/Schedule'
+ *       404:
+ *         description: Harmonogram nie znaleziony
+ *       500:
+ *         description: Błąd serwera
+ */
+router.get('/id/:id', scheduleController.getScheduleById);
+
+/**
+ * @swagger
  * /api/schedule/{date}:
  *   get:
  *     summary: Pobierz harmonogram dla konkretnej daty

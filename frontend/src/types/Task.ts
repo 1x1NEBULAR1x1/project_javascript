@@ -20,4 +20,5 @@ export interface UpdateTaskDto {
   description?: string;
   status?: 'todo' | 'in_progress' | 'done';
   priority?: number;
-} 
+}
+
