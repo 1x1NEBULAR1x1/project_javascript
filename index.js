@@ -7,6 +7,7 @@ require('./models/database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
 app.use(cors());
 // Middleware
 app.use(express.json());

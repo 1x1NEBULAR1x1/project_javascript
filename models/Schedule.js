@@ -118,8 +118,8 @@ class Schedule {
 
   // Dodanie wydarzenia do harmonogramu
   static addEvent(scheduleId, eventData) {
-    const { title, startTime, endTime, description = '' } = eventData;
-
+    const { title, start_time, end_time, description = '' } = eventData;
+    console.log(scheduleId, eventData);
     // Sprawdzenie czy harmonogram istnieje
     const schedule = this.getById(scheduleId);
     if (!schedule) {
@@ -132,8 +132,7 @@ class Schedule {
       VALUES (?, ?, ?, ?, ?)
     `);
 
-    const result = stmt.run(scheduleId, title, description, startTime, endTime);
-
+    const result = stmt.run(scheduleId, title, description, start_time, end_time);
     if (result.changes > 0) {
       return this.getEventById(result.lastInsertRowid);
     }

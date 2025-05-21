@@ -132,9 +132,9 @@ router.get('/:date', scheduleController.getScheduleByDate);
  *                   properties:
  *                     title:
  *                       type: string
- *                     startTime:
+ *                     start_time:
  *                       type: string
- *                     endTime:
+ *                     end_time:
  *                       type: string
  *                     description:
  *                       type: string
@@ -163,13 +163,13 @@ router.post('/', scheduleController.createSchedule);
 
 /**
  * @swagger
- * /api/schedule/{scheduleId}/events:
+ * /api/schedule/{schedule_id}/events:
  *   post:
  *     summary: Dodaj nowe wydarzenie do harmonogramu
  *     tags: [Harmonogram]
  *     parameters:
  *       - in: path
- *         name: scheduleId
+ *         name: schedule_id
  *         schema:
  *           type: string
  *         required: true
@@ -182,16 +182,16 @@ router.post('/', scheduleController.createSchedule);
  *             type: object
  *             required:
  *               - title
- *               - startTime
- *               - endTime
+ *               - start_time
+ *               - end_time
  *             properties:
  *               title:
  *                 type: string
  *                 description: Tytuł wydarzenia
- *               startTime:
+ *               start_time:
  *                 type: string
  *                 description: Czas rozpoczęcia (HH:MM)
- *               endTime:
+ *               end_time:
  *                 type: string
  *                 description: Czas zakończenia (HH:MM)
  *               description:
@@ -218,23 +218,23 @@ router.post('/', scheduleController.createSchedule);
  *       500:
  *         description: Błąd serwera
  */
-router.post('/:scheduleId/events', scheduleController.addEvent);
+router.post('/:schedule_id/events', scheduleController.addEvent);
 
 /**
  * @swagger
- * /api/schedule/{scheduleId}/events/{eventId}:
+ * /api/schedule/{schedule_id}/events/{event_id}:
  *   put:
  *     summary: Aktualizuj wydarzenie
  *     tags: [Harmonogram]
  *     parameters:
  *       - in: path
- *         name: scheduleId
+ *         name: schedule_id
  *         schema:
  *           type: string
  *         required: true
  *         description: ID harmonogramu
  *       - in: path
- *         name: eventId
+ *         name: event_id
  *         schema:
  *           type: string
  *         required: true
@@ -249,10 +249,10 @@ router.post('/:scheduleId/events', scheduleController.addEvent);
  *               title:
  *                 type: string
  *                 description: Tytuł wydarzenia
- *               startTime:
+ *               start_time:
  *                 type: string
  *                 description: Czas rozpoczęcia (HH:MM)
- *               endTime:
+ *               end_time:
  *                 type: string
  *                 description: Czas zakończenia (HH:MM)
  *               description:
@@ -279,23 +279,23 @@ router.post('/:scheduleId/events', scheduleController.addEvent);
  *       500:
  *         description: Błąd serwera
  */
-router.put('/:scheduleId/events/:eventId', scheduleController.updateEvent);
+router.put('/:schedule_id/events/:event_id', scheduleController.updateEvent);
 
 /**
  * @swagger
- * /api/schedule/{scheduleId}/events/{eventId}:
+ * /api/schedule/{schedule_id}/events/{event_id}:
  *   delete:
  *     summary: Usuń wydarzenie
  *     tags: [Harmonogram]
  *     parameters:
  *       - in: path
- *         name: scheduleId
+ *         name: schedule_id
  *         schema:
  *           type: string
  *         required: true
  *         description: ID harmonogramu
  *       - in: path
- *         name: eventId
+ *         name: event_id
  *         schema:
  *           type: string
  *         required: true
@@ -308,6 +308,6 @@ router.put('/:scheduleId/events/:eventId', scheduleController.updateEvent);
  *       500:
  *         description: Błąd serwera
  */
-router.delete('/:scheduleId/events/:eventId', scheduleController.deleteEvent);
+router.delete('/:schedule_id/events/:event_id', scheduleController.deleteEvent);
 
 module.exports = router; 

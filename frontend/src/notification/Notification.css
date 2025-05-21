@@ -1,0 +1,52 @@
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 1rem 1.5rem;
+  border-radius: var(--border-radius);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  max-width: 350px;
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+.notification p {
+  margin: 0;
+  font-weight: 500;
+}
+
+.notification_success {
+  background-color: var(--success-color);
+  color: white;
+}
+
+.notification_error {
+  background-color: var(--error-color);
+  color: white;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+.notification.hiding {
+  animation: fadeOut 0.3s ease-in forwards;
+}

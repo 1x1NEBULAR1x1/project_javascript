@@ -1,80 +1,71 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useState } from 'react'
-import TaskManager from './components/tasks/TaskManager'
-import PomodoroTimer from './components/pomadoroTimer/PomodoroTimer'
-import ScheduleComponent from './components/schedule/ScheduleComponent'
-import { NotificationProvider } from './context/NotificationContext'
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import TasksPage from './pages/tasks/TasksPage';
+import SchedulePage from './pages/schedule/SchedulePage';
+import PomodoroPage from './pages/pomodoroTimer/PomodoroPage';
+import { NotificationProvider } from './notification/NotificationContext';
+import NotificationDisplay from './notification/NotificationDisplay';
+import './App.css';
 
-const queryClient = new QueryClient()
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+    },
+  },
+});
 
-function App() {
-  const [activeTab, setActiveTab] = useState<'all' | 'tasks' | 'pomodoro' | 'schedule'>('all');
+const App: React.FC = () => {
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const toggle_menu = () => {
+    setMenuOpen(!menuOpen);
+  };
 
   return (
     <QueryClientProvider client={queryClient}>
       <NotificationProvider>
-        <div className="app-container">
-          <header>
-            <h1>System Zarządzania Zadaniami</h1>
-            <nav className="app-nav">
-              <button
-                className={`nav-button ${activeTab === 'all' ? 'active' : ''}`}
-                onClick={() => setActiveTab('all')}
-              >
-                Wszystko
+        <Router>
+          <div className="app">
+            <header className="header">
+              <button className="menu_toggle" onClick={toggle_menu}>
+                <span></span>
+                <span></span>
+                <span></span>
               </button>
-              <button
-                className={`nav-button ${activeTab === 'tasks' ? 'active' : ''}`}
-                onClick={() => setActiveTab('tasks')}
-              >
-                Zadania
-              </button>
-              <button
-                className={`nav-button ${activeTab === 'pomodoro' ? 'active' : ''}`}
-                onClick={() => setActiveTab('pomodoro')}
-              >
-                Pomodoro
-              </button>
-              <button
-                className={`nav-button ${activeTab === 'schedule' ? 'active' : ''}`}
-                onClick={() => setActiveTab('schedule')}
-              >
-                Harmonogram
-              </button>
-            </nav>
-          </header>
+              <h1>Organizer Zadań</h1>
+            </header>
 
-          <main className="app-content">
-            {(activeTab === 'all' || activeTab === 'tasks') && (
-              <section className={`app-section ${activeTab !== 'all' ? 'full-width' : ''}`}>
-                <h2>Zadania</h2>
-                <TaskManager />
-              </section>
-            )}
+            <div className={`sidebar ${menuOpen ? 'open' : ''}`}>
+              <nav className="main_nav">
+                <NavLink to="/" end onClick={() => setMenuOpen(false)}>
+                  Zadania
+                </NavLink>
+                <NavLink to="/schedule" onClick={() => setMenuOpen(false)}>
+                  Harmonogram
+                </NavLink>
+                <NavLink to="/pomodoro" onClick={() => setMenuOpen(false)}>
+                  Timer
+                </NavLink>
+              </nav>
+            </div>
 
-            {(activeTab === 'all' || activeTab === 'pomodoro') && (
-              <section className={`app-section ${activeTab !== 'all' ? 'full-width' : ''}`}>
-                <h2>Pomodoro</h2>
-                <PomodoroTimer />
-              </section>
-            )}
-
-            {(activeTab === 'all' || activeTab === 'schedule') && (
-              <section className={`app-section ${activeTab !== 'all' ? 'full-width' : ''}`}>
-                <h2>Harmonogram</h2>
-                <ScheduleComponent />
-              </section>
-            )}
-          </main>
-
-          <footer>
-            <p>&copy; 2023 System Zarządzania Zadaniami</p>
-          </footer>
-
-        </div>
+            <main className="main_content">
+              <NotificationDisplay />
+              <Routes>
+                <Route path="/" element={<TasksPage />} />
+                <Route path="/schedule" element={<SchedulePage />} />
+                <Route path="/pomodoro" element={<PomodoroPage />} />
+              </Routes>
+            </main>
+          </div>
+        </Router>
       </NotificationProvider>
     </QueryClientProvider>
-  )
-}
+  );
+};
 
-export default App
+export default App;

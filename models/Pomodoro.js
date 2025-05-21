@@ -102,19 +102,57 @@ class Pomodoro {
   }
 
   // Aktualizacja sesji
-  static completeSession(id, end_time) {
-    const stmt = db.prepare(`
-      UPDATE pomodoro_sessions
-      SET end_time = ?
-      WHERE id = ?
-    `);
+  static updateSession(id, updateData) {
+    const currentSession = this.getSessionById(id);
+    if (!currentSession) {
+      return null;
+    }
 
-    const result = stmt.run(end_time, id);
+    let query = 'UPDATE pomodoro_sessions SET ';
+    const values = [];
+    const fields = [];
+
+    // Dynamicznie dodajemy pola do aktualizacji
+    if (updateData.task_id !== undefined) {
+      fields.push('task_id = ?');
+      values.push(updateData.task_id);
+    }
+    if (updateData.start_time !== undefined) {
+      fields.push('start_time = ?');
+      values.push(updateData.start_time);
+    }
+    if (updateData.end_time !== undefined) {
+      fields.push('end_time = ?');
+      values.push(updateData.end_time);
+    }
+    if (updateData.duration !== undefined) {
+      fields.push('duration = ?');
+      values.push(updateData.duration);
+    }
+    if (updateData.type !== undefined) {
+      fields.push('type = ?');
+      values.push(updateData.type);
+    }
+
+    if (fields.length === 0) {
+      return currentSession;
+    }
+
+    query += fields.join(', ') + ' WHERE id = ?';
+    values.push(id);
+
+    const stmt = db.prepare(query);
+    const result = stmt.run(...values);
 
     if (result.changes > 0) {
       return this.getSessionById(id);
     }
     return null;
+  }
+
+  // Zakończenie sesji
+  static completeSession(id, end_time) {
+    return this.updateSession(id, { end_time });
   }
 
   // Usuwanie sesji

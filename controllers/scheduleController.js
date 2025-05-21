@@ -73,16 +73,16 @@ exports.getScheduleById = (req, res) => {
   try {
     const { id } = req.params;
 
-    const scheduleId = parseInt(id, 10);
+    const schedule_id = parseInt(id, 10);
 
-    if (isNaN(scheduleId)) {
+    if (isNaN(schedule_id)) {
       return res.status(400).json({
         status: 'error',
         message: 'Nieprawidłowy format ID harmonogramu'
       });
     }
 
-    const schedule = Schedule.getById(scheduleId);
+    const schedule = Schedule.getById(schedule_id);
 
     if (!schedule) {
       return res.status(404).json({
@@ -218,16 +218,8 @@ exports.createSchedule = (req, res) => {
 
 exports.addEvent = (req, res) => {
   try {
-    const { scheduleId } = req.params;
-
-    const eventData = {
-      title: req.body.title,
-      description: req.body.description,
-      startTime: req.body.startTime || req.body.start_time,
-      endTime: req.body.endTime || req.body.end_time
-    };
-
-    const newEvent = Schedule.addEvent(scheduleId, eventData);
+    const { schedule_id } = req.params;
+    const newEvent = Schedule.addEvent(schedule_id, req.body);
 
     if (!newEvent) {
       return res.status(404).json({
@@ -260,16 +252,16 @@ exports.addEvent = (req, res) => {
 
 exports.updateEvent = (req, res) => {
   try {
-    const { scheduleId, eventId } = req.params;
+    const { schedule_id, event_id } = req.params;
 
     const eventData = {
       title: req.body.title,
       description: req.body.description,
-      startTime: req.body.startTime || req.body.start_time,
-      endTime: req.body.endTime || req.body.end_time
+      startTime: req.body.start_time,
+      endTime: req.body.end_time
     };
 
-    const updatedEvent = Schedule.updateEvent(scheduleId, eventId, eventData);
+    const updatedEvent = Schedule.updateEvent(schedule_id, event_id, eventData);
 
     if (!updatedEvent) {
       return res.status(404).json({
@@ -302,8 +294,8 @@ exports.updateEvent = (req, res) => {
 
 exports.deleteEvent = (req, res) => {
   try {
-    const { scheduleId, eventId } = req.params;
-    const result = Schedule.deleteEvent(scheduleId, eventId);
+    const { schedule_id, event_id } = req.params;
+    const result = Schedule.deleteEvent(schedule_id, event_id);
 
     if (!result) {
       return res.status(404).json({
