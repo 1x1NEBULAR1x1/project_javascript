@@ -19,19 +19,19 @@ const queryClient = new QueryClient({
 });
 
 const App: React.FC = () => {
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [menu_open, setMenuOpen] = useState(false);
 
-  const toggle_menu = () => {
-    setMenuOpen(!menuOpen);
+  const toggleMenu = () => {
+    setMenuOpen(!menu_open);
   };
 
   return (
     <QueryClientProvider client={queryClient}>
       <NotificationProvider>
         <Router>
-          <div className="app">
+          <div className={`app ${!menu_open ? 'menu_closed' : ''}`}>
             <header className="header">
-              <button className="menu_toggle" onClick={toggle_menu}>
+              <button className="menu_toggle" onClick={toggleMenu}>
                 <span></span>
                 <span></span>
                 <span></span>
@@ -39,7 +39,7 @@ const App: React.FC = () => {
               <h1>Organizer Zadań</h1>
             </header>
 
-            <div className={`sidebar ${menuOpen ? 'open' : ''}`}>
+            <div className={`sidebar ${menu_open ? 'open' : ''}`}>
               <nav className="main_nav">
                 <NavLink to="/" end onClick={() => setMenuOpen(false)}>
                   Zadania

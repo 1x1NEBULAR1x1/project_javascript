@@ -8,7 +8,7 @@ class Schedule {
   static getByDate(date) {
     if (!date) return null;
 
-    const exactMatch = db.prepare('SELECT * FROM schedule WHERE date = ?').get(date);
+    const exactMatch = db.prepare('SELECT * FROM schedule WHERE created_at = ?').get(date);
     if (exactMatch) {
       exactMatch.events = this.getEventsByScheduleId(exactMatch.id);
       return exactMatch;
@@ -62,7 +62,7 @@ class Schedule {
     }
 
     const stmt = db.prepare(`
-      INSERT INTO schedule (title, description, start_date, end_date, date)
+      INSERT INTO schedule (title, description, start_date, end_date, created_at)
       VALUES (?, ?, ?, ?, ?)
     `);
 
