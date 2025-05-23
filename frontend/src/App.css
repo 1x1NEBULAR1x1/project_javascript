@@ -168,7 +168,6 @@ body {
   }
 }
 
-/* Общие стили компонентов */
 h2 {
   margin-bottom: 1.5rem;
   color: var(--primary-color);
@@ -274,7 +273,6 @@ h3 {
   margin-top: 1rem;
 }
 
-/* Анимации */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -311,7 +309,6 @@ h3 {
   }
 }
 
-/* Применение анимаций */
 .main_content {
   animation: fadeIn 0.5s ease-in-out;
 }
@@ -319,4 +316,39 @@ h3 {
 .task_card,
 .event_card {
   animation: slideInUp 0.3s ease-out;
+}
+
+.not_found_container {
+  text-align: center;
+  padding: 3rem 1rem;
+  max-width: 600px;
+  margin: 0 auto;
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.not_found_container h2 {
+  font-size: 6rem;
+  margin-bottom: 1rem;
+  color: var(--primary-color);
+  line-height: 1;
+  border-bottom: none;
+}
+
+.not_found_container h3 {
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+  color: var(--dark-gray);
+}
+
+.not_found_container p {
+  margin-bottom: 2rem;
+  color: var(--secondary-color);
+  font-size: 1.1rem;
+}
+
+.back_home_btn {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  font-size: 1.1rem;
+  text-decoration: none;
 }

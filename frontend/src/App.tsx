@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import TasksPage from './pages/tasks/TasksPage';
 import SchedulePage from './pages/schedule/SchedulePage';
 import PomodoroPage from './pages/pomodoroTimer/PomodoroPage';
+import NotFoundPage from './pages/NotFoundPage';
 import { NotificationProvider } from './notification/NotificationContext';
 import NotificationDisplay from './notification/NotificationDisplay';
 import './App.css';
@@ -59,6 +60,7 @@ const App: React.FC = () => {
                 <Route path="/" element={<TasksPage />} />
                 <Route path="/schedule" element={<SchedulePage />} />
                 <Route path="/pomodoro" element={<PomodoroPage />} />
+                <Route path="*" element={<NotFoundPage />} />
               </Routes>
             </main>
           </div>
